@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+.env
+dados/evidencias/*
+dados/cadastro/*
+!dados/evidencias/.gitkeep
+!dados/cadastro/.gitkeep
+docs/figuras/
+*.pyc

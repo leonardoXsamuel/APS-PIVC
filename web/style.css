@@ -1,0 +1,40 @@
+:root{--bg:#EEF1F2;--sf:#fff;--ink:#0E1518;--mut:#63777F;--line:#D2DCDF;--ac:#0C6A70;--ok:#3F7D62;--no:#A93B2C;--warn:#A9782A}
+@media (prefers-color-scheme:dark){:root{--bg:#0C1316;--sf:#121C20;--ink:#E7EEEF;--mut:#8399A0;--line:#26373D;--ac:#4FB3B8;--ok:#71B392;--no:#DE7C6C;--warn:#D6AC5F}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}   /* sem isto, "label{display:flex}" anula o atributo hidden */
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Segoe UI",system-ui,sans-serif}
+nav{display:flex;gap:18px;flex-wrap:wrap;padding:14px 24px;background:var(--sf);border-bottom:1px solid var(--line)}
+nav a{color:var(--mut);text-decoration:none;font-weight:600}
+nav a.on,nav a:hover{color:var(--ac)}
+main{max-width:1000px;margin:0 auto;padding:24px}
+h1{font-size:1.5rem;margin:0 0 16px}
+.card{background:var(--sf);border:1px solid var(--line);border-radius:6px;padding:18px;margin-bottom:16px}
+.row{display:flex;gap:14px;flex-wrap:wrap;align-items:end}
+label{display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:var(--mut)}
+input,select,button{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:4px;background:var(--sf);color:var(--ink)}
+button{background:var(--ac);color:#fff;border:0;cursor:pointer;font-weight:600}
+button.sec{background:none;color:var(--ac);border:1px solid var(--ac)}
+button.perigo{background:var(--no)}
+button:disabled{opacity:.5;cursor:not-allowed}
+video,canvas.prev{width:100%;max-width:520px;border-radius:6px;background:#000;display:block}
+.resultado{padding:16px;border-radius:6px;font-weight:600;margin-top:14px;border-left:6px solid}
+.resultado.ok{background:#E3EFE9;border-color:var(--ok);color:#1d4d39}
+.resultado.no{background:#F5E2DE;border-color:var(--no);color:#7a2a1e}
+.resultado.aviso{background:#F5EBD8;border-color:var(--warn);color:#6b4a14}
+.resultado small{display:block;font-weight:400}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{color:var(--mut);font-size:.75rem;text-transform:uppercase;letter-spacing:.06em}
+.tbl{overflow-x:auto}
+.banner{background:var(--no);color:#fff;padding:12px 24px;font-weight:600}
+.fotos{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.fotos img{width:84px;height:64px;object-fit:cover;border-radius:4px;border:1px solid var(--line)}
+.pill{display:inline-block;padding:1px 8px;border-radius:10px;font-size:.78rem;font-weight:600;background:var(--line)}
+.pill.ok{background:#E3EFE9;color:#1d4d39}.pill.no{background:#F5E2DE;color:#7a2a1e}
+
+/* porta das páginas de administração */
+body.admin:not(.liberado) main,body.admin:not(.liberado) .banner{display:none}
+.loginbg{position:fixed;inset:0;z-index:10;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px}
+.login{width:100%;max-width:380px;display:flex;flex-direction:column;gap:14px;margin:0}
+.login h2{margin:0;font-size:1.2rem}
+.login .erro{color:var(--no);font-weight:600}

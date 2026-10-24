@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Logs de acesso</title><link rel="stylesheet" href="style.css"></head>
+<body class="admin">
+<div id="alerta" class="banner" hidden></div>
+<main>
+  <h1>Logs de acesso</h1>
+  <div class="card row">
+    <label>De <input type="date" id="inicio"></label>
+    <label>Até <input type="date" id="fim"></label>
+    <label>Pessoa <select id="usuario"><option value="">Todas</option></select></label>
+    <label>Resultado <select id="resultado"><option value="">Todos</option>
+      <option>concedido</option><option>negado_nivel</option><option>negado_divisao</option><option>negado_horario</option>
+      <option>nao_reconhecido</option><option>falha_liveness</option><option>pin_invalido</option></select></label>
+    <button id="filtrar">Filtrar</button>
+    <button id="csv" class="sec">Exportar CSV</button>
+    <button id="pdf" class="sec">Exportar PDF</button>
+  </div>
+  <div id="saida"></div>
+  <div class="card tbl"><table>
+    <thead><tr><th>Data/hora</th><th>Pessoa</th><th>Recurso</th><th>Resultado</th><th>Score</th><th>Evidência</th></tr></thead>
+    <tbody id="corpo"></tbody></table></div>
+</main>
+<script src="app.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+
+function filtros() {
+  const p = new URLSearchParams();
+  for (const k of ["inicio", "fim", "usuario", "resultado"]) {
+    const v = $(k).value; if (v) p.set(k === "usuario" ? "usuario_id" : k, v);
+  }
+  return p;
+}
+
+async function carregar() {
+  try {
+    const regs = await api("/api/logs?" + filtros(), {}, true);
+    $("saida").innerHTML = "";
+    $("corpo").innerHTML = regs.map(r => `<tr>
+      <td>${esc(r.ocorrido_em).replace("T", " ")}</td><td>${esc(r.usuario || "— não reconhecido —")}</td><td>${esc(r.recurso)}</td>
+      <td><span class="pill ${r.resultado === "concedido" ? "ok" : "no"}">${esc(r.resultado)}</span></td>
+      <td>${r.score == null ? "" : r.score.toFixed(3)}</td>
+      <td>${r.evidencia ? `<a target="_blank" href="/api/evidencia/${encodeURIComponent(r.evidencia.split("/").pop())}?token=${encodeURIComponent(token())}">ver foto</a>` : ""}</td></tr>`).join("")
+      || `<tr><td colspan="6">Nenhum registro para o filtro.</td></tr>`;
+  } catch (e) { $("saida").innerHTML = `<div class="resultado no">${esc(e.message)}</div>`; }
+}
+
+async function exportar(formato) {
+  try {
+    const blob = await api(`/api/logs/exportar?formato=${formato}&` + filtros(), {}, true);
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = `auditoria.${formato}`; a.click();
+  } catch (e) { $("saida").innerHTML = `<div class="resultado no">${esc(e.message)}</div>`; }
+}
+
+async function alertas() {
+  try {
+    const a = await api("/api/alertas", {}, true);
+    $("alerta").hidden = !a.length;
+    if (a.length) $("alerta").textContent = `ALERTA: ${a.length} tentativa(s) negada(s) no cofre principal nos últimos minutos. Última: ${a[0].resultado}.`;
+  } catch { /* sem token ou API fora: o carregamento principal já mostra o erro */ }
+}
+
+$("filtrar").onclick = carregar;
+$("csv").onclick = () => exportar("csv");
+$("pdf").onclick = () => exportar("pdf");
+
+exigirAdmin().then(async () => {
+  try {
+    const us = await api("/api/usuarios", {}, true);
+    $("usuario").innerHTML += us.map(u => `<option value="${u.id}">${esc(u.nome)}</option>`).join("");
+  } catch (e) { /* tratado em carregar() */ }
+  carregar(); alertas(); setInterval(alertas, 10000);
+});
+</script></body></html>

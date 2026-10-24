@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cadastro</title><link rel="stylesheet" href="style.css"></head>
+<body class="admin"><main>
+  <h1>Cadastrar pessoa</h1>
+  <div class="card">
+    <form id="form" class="row">
+      <label>Nome <input name="nome" required></label>
+      <label>Matrícula <input name="matricula" required></label>
+      <label>Cargo <input name="cargo"></label>
+      <label>Nível
+        <select name="nivel" id="nivel"><option value="1">1 · Geral</option><option value="2">2 · Diretor de divisão</option><option value="3">3 · Ministro</option></select></label>
+      <label id="boxDiv" hidden>Divisão <select name="divisao_id" id="divisao"></select></label>
+      <label id="boxPin" hidden>PIN (6 dígitos) <input name="pin" type="password" inputmode="numeric" maxlength="6" autocomplete="off"></label>
+    </form>
+  </div>
+  <div class="card">
+    <video id="video" playsinline muted></video>
+    <p style="color:var(--mut)">Capture de 3 a 5 fotos: frontal, levemente de lado, com boa e com pouca luz.</p>
+    <div class="row"><button id="foto" type="button">Capturar foto</button>
+      <button id="limpar" type="button" class="sec">Limpar fotos</button>
+      <button id="salvar" type="button">Salvar cadastro</button></div>
+    <div class="fotos" id="fotos"></div>
+    <div id="saida"></div>
+  </div>
+</main>
+<script src="app.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const fotos = [];
+
+function msg(classe, t) { $("saida").innerHTML = `<div class="resultado ${classe}">${esc(t)}</div>`; }
+function atualizar() {
+  const n = +$("nivel").value;
+  $("boxDiv").hidden = n !== 2; $("boxPin").hidden = n !== 3;
+}
+function desenharFotos() {
+  $("fotos").innerHTML = "";
+  fotos.forEach(b => { const i = new Image(); i.src = URL.createObjectURL(b); $("fotos").append(i); });
+}
+
+$("nivel").onchange = atualizar;
+$("foto").onclick = async () => {
+  if (fotos.length >= 5) return msg("aviso", "Máximo de 5 fotos. Use \"Limpar fotos\" para recomeçar.");
+  try { fotos.push(await quadro($("video"))); desenharFotos(); $("saida").innerHTML = ""; }
+  catch (e) { msg("aviso", e.message); }
+};
+$("limpar").onclick = () => { fotos.length = 0; desenharFotos(); };
+
+$("salvar").onclick = async () => {
+  if (!$("form").reportValidity()) return;
+  if (fotos.length < 3) return msg("aviso", "Capture pelo menos 3 fotos.");
+  const fd = new FormData($("form"));
+  if (+$("nivel").value !== 2) fd.delete("divisao_id");
+  fotos.forEach((b, i) => fd.append("fotos", b, `f${i}.jpg`));
+  $("salvar").disabled = true; msg("aviso", "Processando fotos...");
+  try {
+    const r = await api("/api/usuarios", { method: "POST", body: fd }, true);
+    msg("ok", `Cadastro concluído com ${r.biometrias} biometrias.`);
+    $("form").reset(); fotos.length = 0; desenharFotos(); atualizar();
+  } catch (e) { msg("no", e.message); }
+  $("salvar").disabled = false;
+};
+
+// Cada parte inicia sozinha: se a lista de divisões falhar, a câmera continua funcionando (e vice-versa).
+exigirAdmin().then(async () => {
+  atualizar();
+  const erros = [];
+  try {
+    const d = await api("/api/divisoes", {}, true);
+    $("divisao").innerHTML = d.length
+      ? d.map(x => `<option value="${x.id}">${esc(x.nome)}</option>`).join("")
+      : `<option value="">(nenhuma divisão cadastrada)</option>`;
+  } catch (e) { erros.push("Divisões: " + e.message); }
+  try { await abrirCamera($("video")); }
+  catch (e) { erros.push("Câmera: " + e.message); }
+  if (erros.length) msg("aviso", erros.join("  "));
+});
+</script></body></html>

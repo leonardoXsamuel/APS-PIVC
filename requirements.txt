@@ -1,0 +1,14 @@
+opencv-python
+insightface
+onnxruntime
+numpy
+mediapipe
+mysql-connector-python
+fastapi
+uvicorn[standard]
+python-multipart
+python-dotenv
+pandas
+matplotlib
+reportlab
+pytest

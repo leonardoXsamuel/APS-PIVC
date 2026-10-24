@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Terminal do Cofre</title><link rel="stylesheet" href="style.css"></head>
+<body><main>
+  <h1>Terminal do Cofre Biométrico</h1>
+  <div class="card">
+    <video id="video" playsinline muted></video>
+    <div class="row" style="margin-top:14px">
+      <label>Recurso <select id="recurso"></select></label>
+      <label id="boxPin" hidden>PIN (6 dígitos)
+        <input id="pin" type="password" inputmode="numeric" maxlength="6" autocomplete="off"></label>
+      <button id="ir">Autenticar</button>
+    </div>
+    <p id="dica" class="mut" hidden style="color:var(--mut)">Cofre principal: olhe para a câmera e <b>pisque</b> duas vezes quando iniciar.</p>
+    <div id="saida"></div>
+  </div>
+</main>
+<script src="app.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+let recursos = [], bloqueadoAte = 0;
+
+function mostrar(classe, titulo, detalhe = "") {
+  $("saida").innerHTML = `<div class="resultado ${classe}">${esc(titulo)}<small>${esc(detalhe)}</small></div>`;
+}
+
+function atualizarCampos() {
+  const r = recursos.find(x => x.id == $("recurso").value);
+  const n3 = r && r.nivel_minimo >= 3;
+  $("boxPin").hidden = $("dica").hidden = !n3;
+}
+
+async function iniciar() {
+  try {
+    recursos = await api("/api/recursos");
+    $("recurso").innerHTML = recursos.map(r => `<option value="${r.id}">${esc(r.nome)} (nível ${r.nivel_minimo}+)</option>`).join("");
+    atualizarCampos();
+    await abrirCamera($("video"));
+  } catch (e) { mostrar("aviso", e.message); $("ir").disabled = true; }
+}
+
+$("recurso").onchange = atualizarCampos;
+
+$("ir").onclick = async () => {
+  const r = recursos.find(x => x.id == $("recurso").value);
+  const n3 = r.nivel_minimo >= 3;
+  if (n3 && !/^\d{6}$/.test($("pin").value)) return mostrar("aviso", "Digite o PIN de 6 dígitos.");
+  $("ir").disabled = true;
+  mostrar("aviso", n3 ? "Pisque olhando para a câmera..." : "Verificando...");
+  try {
+    const fd = new FormData();
+    fd.append("recurso_id", r.id);
+    fd.append("pin", $("pin").value);
+    // nível 3 envia uma rajada (~3 s) para a prova de vida; os demais, um quadro
+    const total = n3 ? 15 : 1;
+    for (let i = 0; i < total; i++) { fd.append("imagens", await quadro($("video")), `q${i}.jpg`); if (n3) await esperar(200); }
+    mostrar("aviso", "Verificando...");
+    const res = await api("/api/reconhecer", { method: "POST", body: fd });
+    const quem = res.usuario ? `${res.usuario} · nível ${res.nivel} · ` : "";
+    mostrar(res.concedido ? "ok" : "no", res.mensagem, `${quem}similaridade ${res.score}`);
+  } catch (e) { mostrar("aviso", e.message); }
+  $("pin").value = "";
+  $("ir").disabled = false;
+};
+iniciar();
+</script></body></html>

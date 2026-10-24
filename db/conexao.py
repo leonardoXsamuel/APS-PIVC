@@ -1,0 +1,44 @@
+"""Pool de conexões MySQL e gerenciador de cursor."""
+from contextlib import contextmanager
+
+import mysql.connector
+from mysql.connector import pooling
+
+import config
+
+_pool = None
+
+
+def _get_pool():
+    global _pool
+    if _pool is None:
+        _pool = pooling.MySQLConnectionPool(
+            pool_name="cofre", pool_size=5, charset="utf8mb4", **config.DB
+        )
+    return _pool
+
+
+@contextmanager
+def cursor(commit=False):
+    """Entrega um cursor de dicionários; devolve a conexão ao pool no fim."""
+    conn = _get_pool().get_connection()
+    cur = conn.cursor(dictionary=True)
+    try:
+        yield cur
+        if commit:
+            conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
+        conn.close()
+
+
+def banco_disponivel() -> bool:
+    try:
+        with cursor() as cur:
+            cur.execute("SELECT 1")
+        return True
+    except mysql.connector.Error:
+        return False
