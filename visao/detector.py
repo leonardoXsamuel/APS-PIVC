@@ -11,18 +11,29 @@ _trava = threading.Lock()
 
 
 def modelo():
-    """Carrega o buffalo_l uma única vez (download de ~300 MB na primeira execução)."""
+    """Carrega o buffalo_l uma única vez (download de ~300 MB na primeira execução).
+    Só os módulos usados: detecção (SCRFD) e reconhecimento (ArcFace)."""
     global _app
     with _trava:
         if _app is None:
             from insightface.app import FaceAnalysis
-            _app = FaceAnalysis(name=config.MODELO)
+            _app = FaceAnalysis(name=config.MODELO,
+                                allowed_modules=["detection", "recognition"])
             _app.prepare(ctx_id=config.CTX_ID, det_size=config.DET_SIZE)
     return _app
 
 
+def modelo_carregado() -> bool:
+    return _app is not None
+
+
+_inferencia = threading.Lock()
+
+
 def detectar(bgr: np.ndarray) -> list:
-    return modelo().get(bgr)
+    app = modelo()
+    with _inferencia:   # a API roda em threads; uma inferência por vez evita corrida no modelo
+        return app.get(bgr)
 
 
 def exigir_um_rosto(rostos: list):

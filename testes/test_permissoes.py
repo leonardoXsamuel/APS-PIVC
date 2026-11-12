@@ -31,8 +31,19 @@ def test_nivel2_negado_em_outra_divisao():
     assert autorizar(usuario(2, DIV_B), ACERVO_A, HORA_UTIL) == (False, "negado_divisao")
 
 
-def test_nivel2_bloqueado_fora_do_expediente():
+def test_nivel2_bloqueado_fora_do_expediente_no_acervo():
     assert autorizar(usuario(2, DIV_A), ACERVO_A, MADRUGADA) == (False, "negado_horario")
+
+
+def test_horario_vale_nos_limites_do_expediente():
+    assert autorizar(usuario(2, DIV_A), ACERVO_A, datetime(2026, 10, 14, 8, 0)) == (True, "concedido")
+    assert autorizar(usuario(2, DIV_A), ACERVO_A, datetime(2026, 10, 14, 17, 59)) == (True, "concedido")
+    assert autorizar(usuario(2, DIV_A), ACERVO_A, datetime(2026, 10, 14, 18, 0)) == (False, "negado_horario")
+
+
+def test_nivel2_entra_na_antessala_a_qualquer_hora():
+    """Regressão: o horário restringe só os acervos; antessala/catálogo são abertos ao nível 1."""
+    assert autorizar(usuario(2, DIV_A), ANTESSALA, MADRUGADA) == (True, "concedido")
 
 
 def test_nivel3_acessa_sem_restricao_de_divisao_ou_horario():

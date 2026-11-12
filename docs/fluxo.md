@@ -5,7 +5,7 @@
 ```mermaid
 flowchart TD
     A([Pessoa diante do terminal]) --> B[Escolhe o recurso]
-    B --> C{Terminal bloqueado?<br/>3 negativas seguidas < 60 s}
+    B --> C{Terminal bloqueado?<br/>3 negativas seguidas em até 60 s,<br/>bloqueio de 60 s desde a última}
     C -- sim --> C1[/Mensagem: aguarde Ns/]
     C -- não --> D[Captura quadro<br/>nível 3: rajada de 15 quadros + PIN]
     D --> E[Fase 2: CLAHE + filtro bilateral]
@@ -13,23 +13,25 @@ flowchart TD
     F -- não --> F1[/Erro orientando: sem rosto, vários rostos,<br/>longe, escuro, pouco nítido/]
     F -- sim --> G[Fase 4: vetor ArcFace 512 d]
     G --> H[Fase 5: cosseno contra a galeria]
-    H --> I{score ≥ limiar 0,40?}
+    H --> I{score ≥ limiar 0,40<br/>e vence a 2ª pessoa por 0,05?}
     I -- não --> N1[(Log: nao_reconhecido + evidência)]
     I -- sim --> J{Nível do usuário ≥ nível do recurso?}
     J -- não --> N2[(Log: negado_nivel + evidência)]
     J -- sim --> K{Nível 2: divisão do recurso é a dele?}
     K -- não --> N3[(Log: negado_divisao + evidência)]
-    K -- sim --> L{Nível 2: dentro do expediente?}
+    K -- sim --> L{Nível 2 em acervo: dentro do expediente?<br/>antessala/catálogo não têm horário}
     L -- não --> N4[(Log: negado_horario + evidência)]
     L -- sim --> M{Recurso de nível 3?}
     M -- não --> OK[(Log: concedido)]
-    M -- sim --> P{Piscou? EAR}
+    M -- sim --> P{Piscou? EAR relativo<br/>um só rosto e a mesma pessoa?}
     P -- não --> N5[(Log: falha_liveness + evidência + alerta)]
-    P -- sim --> Q{PIN correto?}
+    P -- sim --> B3{3 PINs errados<br/>nos últimos 15 min?}
+    B3 -- sim --> N7[(Log: pin_bloqueado + evidência + alerta)]
+    B3 -- não --> Q{PIN correto?}
     Q -- não --> N6[(Log: pin_invalido + evidência + alerta)]
     Q -- sim --> OK
     OK --> Z([Acesso concedido])
-    N1 & N2 & N3 & N4 & N5 & N6 --> Y([Acesso negado])
+    N1 & N2 & N3 & N4 & N5 & N6 & N7 --> Y([Acesso negado])
 ```
 
 ## Módulos e contratos
@@ -53,6 +55,7 @@ flowchart TD
 | `GET/PUT/DELETE /api/usuarios` | admin | APS-19 |
 | `GET /api/logs` · `GET /api/alertas` · `GET /api/evidencia/{arq}` | admin | APS-18 |
 | `GET /api/logs/exportar?formato=csv\|pdf` | admin | APS-19 |
+| `POST /api/qualidade` · `GET /api/resumo` · `GET /api/saude` | admin / público | melhorias |
 
 ## Protótipos (APS-7 e APS-8)
 

@@ -31,11 +31,28 @@ def registrar(usuario_id, recurso, resultado, score, quadro=None):
     return evidencia
 
 
-def segundos_de_bloqueio() -> int:
-    """Se as últimas N tentativas foram todas negadas e recentes, devolve o tempo restante."""
-    n = config.NEGATIVAS_PARA_BLOQUEIO
-    ultimas = repositorio.ultimos_resultados(n)
-    if len(ultimas) < n or any(u["resultado"] == "concedido" for u in ultimas):
+def calcular_bloqueio(ultimas: list, n: int = None, janela: int = None, duracao: int = None) -> int:
+    """Segundos de bloqueio restantes, dado o histórico (do mais recente ao mais antigo).
+
+    Bloqueia quando as últimas `n` tentativas foram todas negadas E aconteceram dentro de
+    `janela` segundos uma da outra. O bloqueio dura `duracao` segundos a partir da última
+    negativa. Depois que expira, é preciso uma nova sequência de `n` negativas para travar de
+    novo (uma única negativa não reabre o bloqueio).
+    Cada item de `ultimas` tem `resultado` e `idade` (segundos desde a tentativa)."""
+    n = config.NEGATIVAS_PARA_BLOQUEIO if n is None else n
+    janela = config.JANELA_NEGATIVAS_SEGUNDOS if janela is None else janela
+    duracao = config.BLOQUEIO_SEGUNDOS if duracao is None else duracao
+    if len(ultimas) < n:
         return 0
-    restante = config.BLOQUEIO_SEGUNDOS - int(ultimas[0]["idade"])
-    return max(restante, 0)
+    ultimas = ultimas[:n]
+    if any(u["resultado"] == "concedido" for u in ultimas):
+        return 0
+    idades = [int(u["idade"]) for u in ultimas]
+    if max(idades) - min(idades) > janela:       # negativas espalhadas: não é uma sequência
+        return 0
+    return max(duracao - min(idades), 0)
+
+
+def segundos_de_bloqueio() -> int:
+    """Consulta o histórico no banco e devolve o tempo de bloqueio restante (0 = liberado)."""
+    return calcular_bloqueio(repositorio.ultimos_resultados(config.NEGATIVAS_PARA_BLOQUEIO))

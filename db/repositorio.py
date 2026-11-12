@@ -151,3 +151,31 @@ def alertas_recentes(minutos):
             (minutos,),
         )
         return cur.fetchall()
+
+
+def pins_invalidos_recentes(usuario_id, minutos):
+    """PINs errados da pessoa nos últimos `minutos`, contando só depois do último acesso concedido."""
+    with cursor() as cur:
+        cur.execute(
+            "SELECT COUNT(*) AS n FROM acessos WHERE usuario_id=%s AND resultado='pin_invalido' "
+            "AND ocorrido_em >= DATE_SUB(NOW(), INTERVAL %s MINUTE) "
+            "AND id > COALESCE((SELECT MAX(c.id) FROM acessos c WHERE c.usuario_id=%s "
+            "AND c.resultado='concedido'), 0)",
+            (usuario_id, minutos, usuario_id),
+        )
+        return int(cur.fetchone()["n"])
+
+
+def resumo_do_dia():
+    """Números de hoje para o painel de logs."""
+    with cursor() as cur:
+        cur.execute(
+            "SELECT COUNT(*) AS total, "
+            "COALESCE(SUM(resultado='concedido'), 0) AS concedidos, "
+            "COALESCE(SUM(resultado<>'concedido'), 0) AS negados, "
+            "COALESCE(SUM(resultado='nao_reconhecido'), 0) AS nao_reconhecidos, "
+            "COALESCE(SUM(alerta), 0) AS alertas "
+            "FROM acessos WHERE ocorrido_em >= CURDATE()"
+        )
+        linha = cur.fetchone()
+        return {k: int(v or 0) for k, v in linha.items()}

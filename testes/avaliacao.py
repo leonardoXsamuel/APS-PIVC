@@ -37,8 +37,17 @@ def _vetores(pasta):
 
 
 def main():
+    if not DIR_TESTE.is_dir() or not config.DIR_CADASTRO.is_dir():
+        raise SystemExit(
+            "Faltam as pastas de imagens. Crie:\n"
+            f"  {config.DIR_CADASTRO}/<nome>/*.jpg\n"
+            f"  {DIR_TESTE}/<nome>/*.jpg\n"
+            f"  {DIR_TESTE}/_desconhecidos/*.jpg"
+        )
     galeria = {p.name: _vetores(p)[0] for p in config.DIR_CADASTRO.iterdir() if p.is_dir()}
     nomes = [n for n, v in galeria.items() if v]
+    if not nomes:
+        raise SystemExit("Nenhuma foto de cadastro utilizável em dados/cadastro/<nome>/.")
     ids = np.array([n for n in nomes for _ in galeria[n]])
     matriz = np.stack([v for n in nomes for v in galeria[n]])
 

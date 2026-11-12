@@ -6,10 +6,11 @@ import numpy as np
 class ErroVisao(Exception):
     """Falha previsível do pipeline; `codigo` é estável para a interface tratar."""
 
-    def __init__(self, codigo: str, mensagem: str):
+    def __init__(self, codigo: str, mensagem: str, **extra):
         super().__init__(mensagem)
         self.codigo = codigo
         self.mensagem = mensagem
+        self.extra = extra          # ex.: segundos restantes do bloqueio
 
 
 def decodificar(dados: bytes) -> np.ndarray:
